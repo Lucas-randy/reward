@@ -6,20 +6,11 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-
-
-/**
- * @swagger
- * tags:
- *   name: Reward
- *   description: API to process Solana transactions and send BTC rewards
- */
-
 /**
  * @swagger
  * /api/reward:
  *   post:
- *     summary: Verify Solana transaction and send BTC reward
+ *     summary: Send BTC reward based on merchant BTC wallet and amount only
  *     tags: [Reward]
  *     requestBody:
  *       required: true
@@ -28,31 +19,15 @@ const prisma = new PrismaClient();
  *           schema:
  *             type: object
  *             required:
- *               - solanaTxId
- *               - merchantSolanaAddress
  *               - merchantBTCAddress
- *               - usdcAmount
- *               - vkaAmount
- *               - customerEmail
+ *               - amount
  *             properties:
- *               solanaTxId:
- *                 type: string
- *                 description: The Solana transaction ID to verify
- *               merchantSolanaAddress:
- *                 type: string
- *                 description: The Solana address of the merchant
  *               merchantBTCAddress:
  *                 type: string
- *                 description: The Bitcoin address of the merchant
- *               usdcAmount:
- *                 type: number
- *                 description: Amount in USDC spent
- *               vkaAmount:
+ *                 description: The Bitcoin wallet address of the client (merchant BTC wallet)
+ *               amount:
  *                 type: number
  *                 description: Amount in VKA tokens spent
- *               customerEmail:
- *                 type: string
- *                 description: Customer email
  *     responses:
  *       200:
  *         description: Reward sent successfully
@@ -62,6 +37,8 @@ const prisma = new PrismaClient();
  *               type: object
  *               properties:
  *                 solanaTxId:
+ *                   type: string
+ *                 merchantSolanaAddress:
  *                   type: string
  *                 btcReward:
  *                   type: object
@@ -91,14 +68,16 @@ const prisma = new PrismaClient();
  */
 
 
+
+
 interface Transaction {
   id: string;
   solanaTxId: string;
-  merchantSolanaAddress: string;
+  merchantSolanaAddress?: string;
   merchantBTCAddress: string;
   usdcAmount: number;
   vkaAmount: number;
-  customerEmail: string;
+  customerEmail?: string;
   btcRewardStatus: string; 
   createdAt: Date;
 }
@@ -107,25 +86,60 @@ interface Transaction {
 const transactions: Transaction[] = [];
 
 export const handleReward = async (req: Request, res: Response) => {
-  const { solanaTxId, merchantSolanaAddress, merchantBTCAddress, usdcAmount, vkaAmount, customerEmail } = req.body;
+  const {
+    solanaTxId,
+    merchantSolanaAddress,
+    merchantBTCAddress,
+    amount, // VKA amount
+    customerEmail,
+  } = req.body;
 
-  if (!solanaTxId || !merchantSolanaAddress || !merchantBTCAddress || !usdcAmount || !vkaAmount || !customerEmail) {
-    return res.status(400).json({ error: 'Missing parameters' });
+  // Validation stricte mais claire
+  if (
+    !solanaTxId ||
+    !merchantSolanaAddress ||
+    !merchantBTCAddress ||
+    (amount === undefined || amount === null || isNaN(amount)) ||
+    !customerEmail
+  ) {
+    return res.status(400).json({ error: "❌ Missing or invalid parameters" });
   }
 
   try {
-    // 1. Vérifier la transaction Solana
-    const isValid = await verifySolanaTransaction(solanaTxId, merchantSolanaAddress, vkaAmount);
+    // Vérification transaction Solana
+    const isValid = await verifySolanaTransaction(
+      solanaTxId,
+      merchantSolanaAddress,
+      amount
+    );
+
     if (!isValid) {
-      return res.status(400).json({ error: 'Invalid Solana transaction' });
+      return res.status(400).json({ error: "❌ Invalid Solana transaction" });
     }
 
-    // 2. (Optionnel) Envoyer USDC au commerçant
+    // Conversion VKA -> USDC
+    const VKA_TO_USD_RATE = 173.02;
+    const usdcAmount = amount * VKA_TO_USD_RATE;
 
-    // 3. Envoyer la récompense BTC via Bitnob
-    const btcReward = await sendBTCReward(merchantBTCAddress, usdcAmount, customerEmail);
+    // Calcul récompense BTC (1%)
+    const btcRewardAmount = usdcAmount * 0.01;
 
-    // 4. Enregistrer dans PostgreSQL
+    // Envoi récompense via Bitnob
+    let btcReward;
+    try {
+      btcReward = await sendBTCReward(
+        merchantBTCAddress,
+        btcRewardAmount,
+        customerEmail
+      );
+    } catch (bitnobErr: any) {
+      return res.status(502).json({
+        error: "❌ Failed to send BTC reward via Bitnob",
+        details: bitnobErr.message || bitnobErr,
+      });
+    }
+
+    // Sauvegarde transaction en base
     const newTransaction = await prisma.transaction.create({
       data: {
         id: uuidv4(),
@@ -133,21 +147,31 @@ export const handleReward = async (req: Request, res: Response) => {
         merchantSolanaAddress,
         merchantBTCAddress,
         usdcAmount,
-        vkaAmount,
+        vkaAmount: amount,
         customerEmail,
-        btcRewardStatus: btcReward?.status ? 'pending' : 'failed',
+        btcRewardStatus:
+          btcReward?.status === "success"
+            ? "success"
+            : btcReward?.status === "failed"
+            ? "failed"
+            : "pending",
       },
     });
 
     return res.json({
-      message: 'Reward sent successfully!',
+      message: `✅ BTC reward sent to merchant wallet: ${merchantBTCAddress}`,
       transaction: newTransaction,
       btcReward,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Internal server error', details: err.message || err });
+    console.error("❌ handleReward Error:", err);
+    return res.status(500).json({
+      error: "Internal server error",
+      details: err.message || err,
+    });
   }
 };
+
 
 
 
@@ -177,7 +201,7 @@ export const handleReward = async (req: Request, res: Response) => {
  *                     type: string
  *                   usdcAmount:
  *                     type: number
- *                   vkaAmount:
+ *                   Amount:
  *                     type: number
  *                   customerEmail:
  *                     type: string
