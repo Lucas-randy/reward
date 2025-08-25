@@ -67,6 +67,19 @@ const prisma = new PrismaClient();
  *                   type: string
  */
 
+/*
+Commande pour tester l'endpoint:
+
+{
+  "solanaTxId": "V5UKFgResGC8GziJgQRPXC4cNRCkXz2t5Sn2zzrcSd2cfByhu12AqHr22Z5okptPqtaFCuAaPkqnFxJNuaxEjeZ",
+  "merchantSolanaAddress": "BhWziEv1nRgqQVruPZzv3DCnDiPcx72mPjvWnxq1nqwh",
+  "merchantBTCAddress": "tb1q9h0yjdupyfpxfjg24rpx755xrplvzd9hz2nj7v",
+  "amount": 2,
+  "customerEmail": "client@example.com"
+}
+
+
+*/
 
 
 
