@@ -54,6 +54,15 @@ const prisma = new PrismaClient();
  *               properties:
  *                 error:
  *                   type: string
+ *       402:
+ *         description: Insufficient funds in Bitnob wallet
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Internal server error
  *         content:
@@ -67,9 +76,9 @@ const prisma = new PrismaClient();
  *                   type: string
  */
 
-/*
-Commande pour tester l'endpoint:
 
+/**
+ Commande pour tester l'endpoint:
 {
   "solanaTxId": "V5UKFgResGC8GziJgQRPXC4cNRCkXz2t5Sn2zzrcSd2cfByhu12AqHr22Z5okptPqtaFCuAaPkqnFxJNuaxEjeZ",
   "merchantSolanaAddress": "BhWziEv1nRgqQVruPZzv3DCnDiPcx72mPjvWnxq1nqwh",
@@ -77,12 +86,7 @@ Commande pour tester l'endpoint:
   "amount": 2,
   "customerEmail": "client@example.com"
 }
-
-
-*/
-
-
-
+ */
 interface Transaction {
   id: string;
   solanaTxId: string;
@@ -146,6 +150,13 @@ export const handleReward = async (req: Request, res: Response) => {
         customerEmail
       );
     } catch (bitnobErr: any) {
+      // Check for insufficient funds error from Bitnob
+      if (bitnobErr.message.includes("vous n'avez pas assez de fonds")) {
+        return res.status(402).json({
+          error: "Veuillez approvisionner votre wallet",
+          details: "Solde insuffisant pour envoyer une récompense. Veuillez ajouter des fonds à votre compte Bitnob."
+        });
+      }
       return res.status(502).json({
         error: "❌ Failed to send BTC reward via Bitnob",
         details: bitnobErr.message || bitnobErr,
@@ -184,7 +195,6 @@ export const handleReward = async (req: Request, res: Response) => {
     });
   }
 };
-
 
 
 

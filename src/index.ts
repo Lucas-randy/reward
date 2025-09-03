@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import rewardRoutes from './routes/reward.routes';
 import userRoutes from './routes/user.routes'; 
 import transactionRoutes from './routes/transaction.route';
+import bitnobRoutes from "./routes/bitnob.routes";
+
+
 
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
@@ -32,6 +35,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/reward', rewardRoutes); // inclut POST / et GET /transactions
 app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use("/api/bitnob", bitnobRoutes);
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

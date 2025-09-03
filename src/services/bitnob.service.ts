@@ -24,6 +24,31 @@ const convertUSDCtoSatoshis = (usdcAmount: number): number => {
   return Math.floor(btcAmount * 1e8); // conversion en satoshis
 };
 
+// 🔹 Get Wallets
+export const getWallets = async (): Promise<any> => {
+  try {
+    const headers = {
+      Authorization: `Bearer ${BITNOB_API_KEY}`,
+      accept: "application/json",
+    };
+
+    const response = await axios.get(`${BITNOB_BASE_URL}/wallets`, { headers });
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Bitnob API Error (getWallets):", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+
+    throw new BitnobError(
+      "Failed to fetch Bitnob wallets",
+      error.response?.status || 500,
+      error.response?.data || error.message
+    );
+  }
+};
+
 /**
  * Envoie une récompense en BTC via Bitnob
  * @param btcAddress Adresse Bitcoin (testnet ou mainnet selon config Bitnob)

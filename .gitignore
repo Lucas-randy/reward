@@ -1,0 +1,7 @@
+# Ne pas push node_modules
+node_modules/
+
+# Fichiers temporaires
+dist/
+build/
+.env
