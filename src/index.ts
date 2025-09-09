@@ -5,6 +5,7 @@ import userRoutes from './routes/user.routes';
 import transactionRoutes from './routes/transaction.route';
 import bitnobRoutes from "./routes/bitnob.routes";
 
+import merchantRoutes from './routes/merchant.routes';
 
 
 import swaggerUi from 'swagger-ui-express';
@@ -36,6 +37,7 @@ app.use('/api/reward', rewardRoutes); // inclut POST / et GET /transactions
 app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use("/api/bitnob", bitnobRoutes);
+app.use('/api/merchants', merchantRoutes);
 
 
 const PORT = process.env.PORT || 3000;

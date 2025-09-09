@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { BalanceService } from "../services/balance.service";
 
+
+/**
+ * GET /api/balance/:publicKey
+ * Retourne solde BTC (Bitnob) + USDC (Solana)
+ */
 export const getBalances = async (req: Request, res: Response) => {
   try {
     const btcBalance = await BalanceService.getBTCBalance();

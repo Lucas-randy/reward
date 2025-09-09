@@ -3,10 +3,7 @@ import { BalanceService } from "../services/balance.service";
 
 const router = Router();
 
-/**
- * GET /api/balance/:publicKey
- * Retourne solde BTC (Bitnob) + USDC (Solana)
- */
+
 router.get("/:publicKey", async (req, res) => {
   try {
     const { publicKey } = req.params;
